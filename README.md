@@ -51,6 +51,38 @@ npm run dev          # 打开 http://127.0.0.1:5173
 | `npm run deploy:frontend`  | 只发布前端                                          |
 | `npm run doctor`           | 环境自检                                            |
 
+## 独立部署（Docker，不依赖 adep 平台）
+
+工程自带 Docker 配置，可在任意装 Docker 的机器上自托管，无需 adep 平台。
+
+**架构**：单容器 = `adep serve`（本地模拟运行时，与平台同源执行器）承载云函数
+（`/api/*`）+ 静态托管前端（`web/dist` 挂到 `/`）+ 本地持久化（`.adep/sim/` 卷）。
+启动时自动应用 `functions/schema.sql` 建表（IF NOT EXISTS 幂等），数据挂卷不丢。
+
+```bash
+# 构建并启动（默认 http://localhost:8787）
+docker compose up -d --build
+
+# 或手动运行
+docker build -t countdown .
+docker run -d --name countdown -p 8787:8787 -v countdown-data:/app/.adep countdown
+```
+
+| 文件                     | 作用                                        |
+| ------------------------ | ------------------------------------------- |
+| `Dockerfile`             | 多阶段构建：vite build 前端 → 运行时镜像    |
+| `compose.yaml`           | 单实例编排 + 数据卷 + 健康检查（/healthz）  |
+| `.dockerignore`          | 构建上下文忽略清单（防宿主产物/密钥进镜像） |
+| `.env.example`           | 环境变量示例（复制为 `.env` 按需修改）      |
+
+本地不装 Docker 也能以同样命令试跑（`adep serve` 需要已安装 CLI）：
+
+```bash
+npm run start   # = adep serve --host 0.0.0.0 --schema functions/schema.sql --static ./web/dist --spa
+```
+
+先 `npm run build` 生成 `web/dist` 再 `npm run start`，浏览器访问 `http://127.0.0.1:8787`。
+
 ## 部署到本地 adep 平台
 
 1. 平台已在本机 dev 运行（`http://adep.localhost:3001`），先用账号登录 CLI：
@@ -83,4 +115,3 @@ npm run dev          # 打开 http://127.0.0.1:5173
 | rpx 布局（750 设计稿） | rem（1rem = 100rpx）                       | 应用壳限宽 480px 手机式画布，视觉等比            |
 | 下拉刷新（系统手势）   | 触摸下拉（pointer 事件实现）               | 桌面端也可用鼠标拖拽下拉                         |
 | 系统导航栏             | 页面内渐变导航栏                           | 视觉对齐小程序                                   |
-- 2026-09-12：接入平台 Git 自动部署（push main 即自动同步+部署，含 schema 自动应用）

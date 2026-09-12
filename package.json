@@ -9,6 +9,7 @@
     "dev:api": "adep dev",
     "build": "vite build -c web/vite.config.ts",
     "preview": "vite preview -c web/vite.config.ts",
+    "start": "adep serve --host 0.0.0.0 --schema functions/schema.sql --static ./web/dist --spa",
     "test": "vitest run",
     "test:watch": "vitest",
     "db:init": "adep db start && adep db migrate functions/schema.sql",
@@ -24,7 +25,7 @@
     "@vitejs/plugin-vue": "^6.0.0",
     "typescript": "5.9.3",
     "vite": "^7.0.0",
-    "vitest": "4.1.11",
+    "vitest": "^3.2.4",
     "vue": "^3.5.42"
   }
 }

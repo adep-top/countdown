@@ -1,0 +1,21 @@
+# Docker 构建上下文忽略清单（独立部署镜像）
+# 依赖与本地态：镜像内由 npm install 重装，不把宿主产物烤进层
+node_modules/
+.adep/
+site/
+web/dist/
+web/node_modules/
+
+# 密钥与本地覆盖：只经 compose env_file 在运行期注入，绝不进镜像层
+.env
+.env.local
+.env.*.local
+
+# 文档 / 编排 / 元数据不参与镜像构建
+docs/
+README.md
+compose.yaml
+.git/
+.gitignore
+*.log
+.DS_Store
