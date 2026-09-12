@@ -1,0 +1,5 @@
+# 本地模拟运行时数据（adep dev / vite 插件生成）
+.adep/
+
+# 依赖（根仓库 .gitignore 已全局忽略 node_modules，这里留档说明）
+node_modules/

@@ -1,0 +1,96 @@
+/**
+ * 全局样式（移植自小程序 app.wxss + 各页 wxss 的公共基调）。
+ *
+ * rpx → rem 换算：小程序设计稿宽 750rpx。web 端把应用壳（.app）限制为 480px 宽的
+ * 手机式画布，令 1rem = 100rpx = 64px（480 / 7.5），全部原 wxss 的 `N rpx` 换算为
+ * `N/100 rem`。rem 是相对根元素 <html> 的，故基准字号设在 html 上；视口窄于
+ * 480px 时根字号随视口缩放（100rpx = 13.333vw），小窗口下比例保持一致。
+ */
+:root {
+  --primary: #3b6ef6;
+  --primary-2: #6a8dff;
+  --bg: #f5f7fb;
+  --card: #ffffff;
+  --text-1: #1f2430;
+  --text-2: #6b7385;
+  --text-3: #9aa3b2;
+  --line: #eef0f5;
+
+  --normal: #3b6ef6; /* >30 天 */
+  --soon: #ff9f43; /* 7-30 天 */
+  --urgent: #ff5a5f; /* <7 天 */
+  --past: #a0a8b8; /* 已过去 */
+}
+
+html {
+  /* 1rem = 100rpx（480px 画布下 1rpx = 0.64px）；随视口窄于 480px 缩放 */
+  font-size: 64px;
+}
+
+@media (max-width: 479px) {
+  html {
+    font-size: calc(100vw / 7.5); /* 1rpx = 1vw / 7.5 */
+  }
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: #e8ebf1;
+  font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    'PingFang SC',
+    'Helvetica Neue',
+    Helvetica,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+textarea {
+  font-family: inherit;
+  outline: none;
+  border: none;
+  background: none;
+}
+
+/* 应用壳：居中手机式画布（rem 基准在 html，见文件头注释） */
+.app {
+  position: relative;
+  max-width: 480px;
+  height: 100dvh;
+  margin: 0 auto;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text-1);
+}
+
+/* 页面滚动容器（各视图内部使用） */
+.page-scroll {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+.page-scroll::-webkit-scrollbar {
+  width: 0;
+}
+
+.no-select {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
