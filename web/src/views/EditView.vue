@@ -3,8 +3,7 @@
 // 实时天数预览 + 表单（名称/日期/分类/计时方式/备注/置顶）+ 保存/删除。
 import { computed, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { request } from '../lib/request'
-import { ensureLogin } from '../lib/auth'
+import { getEvent, createEvent, updateEvent, deleteEvent } from '../lib/events'
 import { calcDays, daysText, levelOf, isValidDate, todayStr, weekdayOf } from '../lib/date'
 import { CATEGORIES, CATEGORY_LABEL } from '../lib/config'
 import { showToast, showModal } from '../ui/ui'
@@ -44,18 +43,12 @@ const preview = computed(() => {
 async function loadEvent(): Promise<void> {
   if (!id) return
   try {
-    await ensureLogin()
-    const res = await request<{
-      event: {
-        title: string
-        target_date: string
-        note: string
-        category: string
-        direction: 'countdown' | 'countup'
-        is_pinned: boolean
-      }
-    }>(`/api/events/${id}`)
-    const e = res.event
+    const e = await getEvent(id)
+    if (!e) {
+      showToast({ title: '事件不存在', icon: 'none' })
+      setTimeout(() => router.back(), 800)
+      return
+    }
     const idx = Math.max(
       0,
       CATEGORIES.findIndex((c) => c.value === e.category)
@@ -107,11 +100,10 @@ async function onSave(): Promise<void> {
 
   submitting.value = true
   try {
-    await ensureLogin()
     if (isEdit) {
-      await request(`/api/events/${id}`, { method: 'PUT', data: payload })
+      await updateEvent(id, payload)
     } else {
-      await request('/api/events', { method: 'POST', data: payload })
+      await createEvent(payload)
     }
     showToast({ title: isEdit ? '已保存' : '已添加', icon: 'success' })
     setTimeout(() => router.back(), 600)
@@ -132,7 +124,7 @@ async function onDelete(): Promise<void> {
   if (!ok) return
   deleting.value = true
   try {
-    await request(`/api/events/${id}`, { method: 'DELETE' })
+    await deleteEvent(id)
     showToast({ title: '已删除', icon: 'success' })
     setTimeout(() => router.back(), 600)
   } catch (err) {

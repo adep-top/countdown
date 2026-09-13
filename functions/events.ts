@@ -7,7 +7,7 @@
  *   GET    /events/:id            → { event }
  *   PUT    /events/:id            → 局部更新
  *   DELETE /events/:id            → 删除
- * 鉴权：Bearer device_id（见 _shared/auth.ts）。
+ * 鉴权：OIDC 身份（网关解析 Bearer → ctx.user）优先，未命中回退 device_id（见 _shared/auth.ts）。
  */
 import type { FunctionContext } from '@adep/types'
 import { ok, fail, CODE } from './_shared/response'

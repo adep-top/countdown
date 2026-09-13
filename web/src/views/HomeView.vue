@@ -3,8 +3,7 @@
 // 渐变头部 + 总数/下一个 + 分类筛选 + 左滑置顶/删除 + 长按菜单 + 下拉刷新 + 本地缓存秒开。
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { request } from '../lib/request'
-import { ensureLogin } from '../lib/auth'
+import { listEvents, updateEvent, deleteEvent } from '../lib/events'
 import { decorateEvent, type CountdownEvent, type DecodedEvent } from '../lib/date'
 import { CATEGORIES } from '../lib/config'
 import { showToast, showModal, showActionSheet } from '../ui/ui'
@@ -56,10 +55,10 @@ async function loadEvents(force = false): Promise<void> {
   }
 
   try {
-    await ensureLogin()
-    const res = await request<{ events: CountdownEvent[] }>('/api/events')
-    localStorage.setItem(CACHE_KEY, JSON.stringify(res.events ?? []))
-    applyList(res.events ?? [])
+    // 登录即服务：已登录读云端 / 未登录读 localStorage（events.ts 内部分发）。
+    const events = await listEvents()
+    localStorage.setItem(CACHE_KEY, JSON.stringify(events))
+    applyList(events)
     data.loaded = true
   } catch (err) {
     console.warn('[index] 加载失败', err)
@@ -178,7 +177,7 @@ function clearLongPress(): void {
 async function onTogglePin(id: string, pinned: boolean): Promise<void> {
   const next = !pinned
   try {
-    await request(`/api/events/${id}`, { method: 'PUT', data: { is_pinned: next } })
+    await updateEvent(id, { is_pinned: next })
     showToast({ title: next ? '已置顶' : '已取消置顶', icon: 'none' })
     await loadEvents(true)
   } catch (err) {
@@ -195,7 +194,7 @@ async function onDelete(id: string, title: string): Promise<void> {
   })
   if (!ok) return
   try {
-    await request(`/api/events/${id}`, { method: 'DELETE' })
+    await deleteEvent(id)
     showToast({ title: '已删除', icon: 'success' })
     await loadEvents(true)
   } catch (err) {

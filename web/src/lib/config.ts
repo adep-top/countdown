@@ -7,6 +7,13 @@
  */
 export const BASE_URL = ''
 
+/**
+ * 平台 OIDC 授权服务器 issuer（登录即服务）：三方登录走平台 /oauth/* 端点。
+ * 本地开发默认本机平台 dev（PORT=3000）；生产部署用 VITE_AUTH_ISSUER 指向平台
+ * 部署域名（如 https://auth.adep.example.com/api，README「接入平台登录」）。
+ */
+export const AUTH_ISSUER = (import.meta.env.VITE_AUTH_ISSUER as string | undefined) ?? 'http://127.0.0.1:3000/api'
+
 export const MAX_EVENTS = 200
 
 export const CATEGORIES = [

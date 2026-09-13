@@ -1,13 +1,14 @@
 /**
- * 登录状态管理（移植自小程序 utils/auth.js）。
+ * 登录状态管理（登录即服务版）。
  *
- * 流程：ensureLogin() → 有 token 直接返回缓存 user；否则拿设备身份 device_id
- * POST /auth/login 换 token + user（等价小程序的 wx.login → code2Session）。
- * 并发只发一次登录请求（loginPromise 复用）。
+ * 原「设备身份 device_id 自动登录」迁移为「adep 平台三方登录（OIDC）」：
+ * - 未登录：数据存 localStorage（见 events.ts），用户信息页显示 [登录以同步数据]；
+ * - 已登录：会话由 oidc.ts 持久化，ensureLogin() 恢复会话并拉云端用户（/auth/me）。
+ * 不再有静默设备登录；token 全权归 OIDC 会话（oidc.ts），request.ts 请求时自取。
  */
 import { request } from './request'
-import { getDeviceId, resetDeviceId } from './device'
-import { getToken, setToken, clearToken, TOKEN_KEY } from './request'
+import { hasSession } from './oidc'
+import * as oidc from './oidc'
 
 const USER_KEY = 'countdown_user'
 
@@ -17,14 +18,6 @@ export interface AppUser {
   avatar_url: string
   created_at: string
 }
-
-export interface LoginResult {
-  token: string
-  expires_in: number
-  user: AppUser
-}
-
-let loginPromise: Promise<AppUser> | null = null
 
 export function getUser(): AppUser | null {
   try {
@@ -39,45 +32,33 @@ function saveUser(user: AppUser): void {
   localStorage.setItem(USER_KEY, JSON.stringify(user))
 }
 
+/** 是否处于 OIDC 登录态（有持久化会话）。 */
+export function isLoggedIn(): boolean {
+  return hasSession()
+}
+
+/**
+ * 恢复登录：有 OIDC 会话 → 拉取云端用户并缓存；未登录返回 null（不强制登录）。
+ * 供页面/启动调用；token 有效性由 request 层刷新兜底。
+ */
+export async function ensureLogin(): Promise<AppUser | null> {
+  if (!isLoggedIn()) return null
+  try {
+    const data = await request<{ user: AppUser }>('/api/auth/me', { retry: false })
+    saveUser(data.user)
+    return data.user
+  } catch {
+    return null
+  }
+}
+
+/** 清理本地用户缓存（OIDC 会话不动）。 */
 export function clearSession(): void {
-  clearToken()
   localStorage.removeItem(USER_KEY)
 }
 
-/** 登录：设备身份 → 云函数建/取用户 → 落 token + user。 */
-export async function login(): Promise<AppUser> {
-  const deviceId = getDeviceId()
-  const data = await request<LoginResult>('/api/auth/login', {
-    method: 'POST',
-    data: { deviceId },
-    retry: false,
-  })
-  setToken(data.token)
-  saveUser(data.user)
-  return data.user
-}
-
-/** 有 token 直接返回，否则登录；并发只发一次请求。 */
-export function ensureLogin(): Promise<AppUser | null> {
-  if (getToken()) return Promise.resolve(getUser())
-  if (loginPromise) return loginPromise
-  loginPromise = login().then(
-    (user) => {
-      loginPromise = null
-      return user
-    },
-    (err: unknown) => {
-      loginPromise = null
-      throw err
-    }
-  )
-  return loginPromise
-}
-
-/** 退出登录：清除本地登录态与事件缓存；下次打开自动用新身份重新登录（云端数据保留）。 */
+/** 退出登录：清 OIDC 会话 + 本地用户缓存。 */
 export function logout(): void {
   clearSession()
-  resetDeviceId()
+  void oidc.logout()
 }
-
-export { getToken, TOKEN_KEY }

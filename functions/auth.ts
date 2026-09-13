@@ -3,7 +3,11 @@
  *
  * 路由（归一化后，前缀 /api 由 _shared/route.ts 剥除）：
  *   POST /auth/login  { deviceId }       → 取/建用户，返回 { token, expires_in, user }
- *   GET  /auth/me                        → 当前用户 + 事件计数（Bearer device_id）
+ *   GET  /auth/me                        → 当前用户 + 事件计数
+ *
+ * 鉴权双来源（登录即服务，见 _shared/auth.ts）：OIDC 身份（`Authorization: Bearer`
+ * OAuth token，网关解析成 ctx.user）优先；未命中回退 device_id 凭据。`/auth/me` 的
+ * `auth_mode` 字段据此区分：'oidc' = 平台三方登录 / 'device' = 本地设备身份。
  */
 import type { FunctionContext } from '@adep/types'
 import { ok, fail, CODE } from './_shared/response'
@@ -90,6 +94,8 @@ export default async function handle(ctx: FunctionContext) {
       user: toUserDTO(fresh),
       event_count: eventCount,
       max_events: 200,
+      // 登录即服务：'oidc' = 平台三方登录（网关解析 Bearer → ctx.user）；'device' = 本地设备身份。
+      auth_mode: ctx.user !== null ? 'oidc' : 'device',
     })
   }
 

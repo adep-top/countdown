@@ -15,11 +15,11 @@ apps/countdown/
 │   ├── package.json      # 前端依赖（平台 bun install + vite build 使用）
 │   ├── vite.config.ts    # vue() + adep() 全栈插件（一条命令起前端 + 模拟运行时）
 │   └── src/
-│       ├── lib/          # config / date / request / auth / device（移植自 utils/）
+│       ├── lib/          # config / date / request / auth / events / oidc（OIDC 登录 + 数据层）
 │       ├── ui/           # TabBar + Toast/Modal/ActionSheet（web 版 wx 组件）
-│       └── views/        # HomeView / EditView / ProfileView（移植自 pages/）
+│       └── views/        # HomeView / EditView / ProfileView + OidcCallbackView
 ├── functions/            # 云函数（移植自 cf-backend）
-│   ├── auth.ts           # POST /auth/login、GET /auth/me
+│   ├── auth.ts           # GET /auth/me（OIDC 身份优先，device 身份兼容）
 │   ├── events.ts         # 事件 CRUD（置顶/排序/分类过滤/200 上限）
 │   ├── schema.sql        # 建表 DDL（adep db migrate 使用）
 │   └── _shared/          # response / date / store / auth / route
@@ -106,12 +106,37 @@ npm run start   # = adep serve --host 0.0.0.0 --schema functions/schema.sql --st
 > 平台改进配套：CLI 新增 `adep frontend sync`（上传本地 `web/` 源码为平台前端草稿）
 > 与 `adep db migrate <file>`（应用 schema.sql），`adep publish` 全量发布会自动执行。
 
+## 接入平台登录（登录即服务）
+
+登录走 **adep 平台三方登录（OIDC 授权码 + PKCE）**，而非本应用自建账号体系：
+
+- 协议面全部走平台 OIDC 端点（`/.well-known/openid-configuration` 发现、`/oauth/register`
+  动态客户端注册、`/oauth/token` 交换/刷新、`/oauth/revoke` 吊销），客户端逻辑见
+  `web/src/lib/oidc.ts`（消费 SDK `@adep/auth-client`）。
+- **数据双态**：未登录 → 存浏览器 localStorage（`web/src/lib/events.ts`），用户信息页显示
+  [登录以同步数据]；登录后自动切云端，`OidcCallbackView` 回调时把本地数据并入云端（按
+  title+target_date 去重，成功即清空本地）。
+- **身份透传**：云函数从网关解析的 `ctx.user`（OIDC 身份，映射到本地 `oidc:<平台用户 id>`）
+  或设备身份 `device_id` 双来源取用户（`functions/_shared/auth.ts`）。
+- **回调白名单**：`http://127.0.0.1:{端口}/oauth/callback`（回环）与
+  `http(s)://<app>.<平台域>/oauth/callback`（平台部署应用子域）均可（见平台 `oauth/store.ts`）。
+
+### 本地开发
+
+平台 dev 默认 `http://127.0.0.1:3000/api`（`web/src/lib/config.ts` 的 `AUTH_ISSUER` 缺省值），
+`npm run dev` 开箱即可点 [登录以同步数据] 走完整授权流程。
+
+### 生产部署
+
+`VITE_AUTH_ISSUER` 指向平台部署域的 issuer（如 `https://auth.adep.example.com/api`），
+且回调地址（`origin + /oauth/callback`）必须在平台 oauth 白名单内。
+
 ## 与原始小程序的差异（有意为之）
 
 | 小程序                 | web 移植                                   | 说明                                             |
 | ---------------------- | ------------------------------------------ | ------------------------------------------------ |
-| wx.login → openid      | 浏览器生成持久 `device_id`（localStorage） | 设备身份即账号，等价 API Key；无登录页，开箱即用 |
-| JWT（server 签发）     | Bearer = device_id                         | 迁移说明见 docs/porting-notes.md                 |
+| wx.login → openid      | adep 平台 OIDC 三方登录（授权码 + PKCE）   | 登录即服务：复用平台账号，未登录回退本地存储     |
+| JWT（server 签发）     | Bearer = OAuth access token（网关解析）    | 未登录时 device_id 兼容（旧数据不丢）            |
 | rpx 布局（750 设计稿） | rem（1rem = 100rpx）                       | 应用壳限宽 480px 手机式画布，视觉等比            |
 | 下拉刷新（系统手势）   | 触摸下拉（pointer 事件实现）               | 桌面端也可用鼠标拖拽下拉                         |
 | 系统导航栏             | 页面内渐变导航栏                           | 视觉对齐小程序                                   |

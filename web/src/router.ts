@@ -7,6 +7,8 @@ const router = createRouter({
     { path: '/edit', name: 'edit', component: () => import('./views/EditView.vue') },
     { path: '/edit/:id', name: 'edit-id', component: () => import('./views/EditView.vue') },
     { path: '/profile', name: 'profile', component: () => import('./views/ProfileView.vue') },
+    // OIDC 授权回调（平台授权后整页跳回；redirect_uri 白名单见平台 oauth/store.ts）
+    { path: '/oauth/callback', name: 'oauth-callback', component: () => import('./views/OidcCallbackView.vue') },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
 })

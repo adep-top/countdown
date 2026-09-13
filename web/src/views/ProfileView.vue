@@ -1,9 +1,12 @@
 <script setup lang="ts">
 // 我的（移植自 pages/profile/*）。
-// 用户卡片 + 分类统计 + 清缓存/服务地址/版本 + 数据说明 + 退出登录。
+// 登录即服务：未登录 → 用户卡片 + [登录以同步数据]（数据在 localStorage，见 events.ts）；
+// 已登录 → 云端用户信息 + 分类统计 + 退出登录。
 import { computed, onMounted, reactive } from 'vue'
 import { request } from '../lib/request'
-import { ensureLogin, getUser, logout } from '../lib/auth'
+import { ensureLogin, getUser, logout, isLoggedIn } from '../lib/auth'
+import { startLogin } from '../lib/oidc'
+import { listEvents } from '../lib/events'
 import { CATEGORY_LABEL } from '../lib/config'
 import { showModal, showToast } from '../ui/ui'
 
@@ -22,6 +25,8 @@ const data = reactive({
   stats: [] as Array<{ label: string; value: number }>,
 })
 
+const loggedIn = computed(() => isLoggedIn())
+
 const apiHost = computed(() => {
   const url = new URL(window.location.href)
   return url.host || ''
@@ -36,17 +41,24 @@ function formatCreatedAt(raw: string | undefined): string {
 
 async function loadStats(): Promise<void> {
   data.user = getUser()
+  if (!isLoggedIn()) {
+    // 未登录：数据在 localStorage，不请求云端；展示本地事件数。
+    const local = await listEvents()
+    data.eventCount = local.length
+    data.maxEvents = 200
+    data.stats = []
+    return
+  }
   try {
     await ensureLogin()
-    const [me, listData] = await Promise.all([
+    const [me, events] = await Promise.all([
       request<{
         user: { id: string; nickname: string; avatar_url: string; created_at: string }
         event_count: number
         max_events: number
-      }>('/api/auth/me'),
-      request<{ events: Array<{ category: string }> }>('/api/events').catch(() => ({ events: [] })),
+      }>('/api/auth/me', { retry: false }),
+      listEvents(),
     ])
-    const events = listData.events ?? []
     const counter: Record<string, number> = {}
     events.forEach((e) => {
       const key = e.category || 'other'
@@ -65,6 +77,13 @@ async function loadStats(): Promise<void> {
   }
 }
 
+/** 登录：整页跳平台授权页（回调回 /profile 后自动同步本地数据）。 */
+function onLogin(): void {
+  void startLogin().catch((err: unknown) => {
+    showToast({ title: err instanceof Error ? err.message : '登录失败', icon: 'none' })
+  })
+}
+
 async function onClearCache(): Promise<void> {
   const ok = await showModal({
     title: '清空本地缓存',
@@ -79,7 +98,7 @@ async function onClearCache(): Promise<void> {
 async function onLogout(): Promise<void> {
   const ok = await showModal({
     title: '退出登录',
-    content: '退出后本地登录状态将被清除，下次打开会自动重新登录。',
+    content: '退出后本机登录状态将被清除；未登录期间数据保存在本机浏览器。',
     confirmText: '退出',
   })
   if (!ok) return
@@ -87,7 +106,7 @@ async function onLogout(): Promise<void> {
   localStorage.removeItem(CACHE_KEY)
   showToast({ title: '已退出', icon: 'success' })
   setTimeout(() => {
-    window.location.href = '/'
+    window.location.href = '/profile'
   }, 400)
 }
 
@@ -121,6 +140,7 @@ onMounted(() => {
           <div v-if="data.user?.created_at" class="user-meta">
             注册于 {{ formatCreatedAt(data.user.created_at) }}
           </div>
+          <div v-else-if="!loggedIn" class="user-meta">数据仅保存在本机浏览器</div>
         </div>
         <div class="user-count">
           <div class="count-num">{{ data.eventCount }}</div>
@@ -130,6 +150,12 @@ onMounted(() => {
     </header>
 
     <div class="page-scroll body">
+      <!-- 未登录：引导登录（登录后回调自动同步本地数据到云端） -->
+      <div v-if="!loggedIn" class="login-banner">
+        <button class="login-btn" @click="onLogin">登录以同步数据</button>
+        <div class="login-tip">登录 adep 账号后，本机数据将同步到云端</div>
+      </div>
+
       <div v-if="data.stats.length > 0" class="panel">
         <div class="panel-title">分类统计</div>
         <div class="stats">
@@ -158,12 +184,12 @@ onMounted(() => {
       <div class="tips">
         <div class="tips-title">数据存储说明</div>
         <div class="tips-text">
-          你的事件数据保存在 adep 平台项目数据库（本地开发为模拟运行时 / 部署后为平台项目库），
-          换浏览器登录同一个设备身份即可继续查看，清缓存不会丢失云端数据。
+          未登录时事件保存在本机浏览器（localStorage）；登录 adep 账号后自动同步到云端，
+          换设备登录同一账号即可继续查看。清缓存不会丢失云端数据。
         </div>
       </div>
 
-      <button class="logout" @click="onLogout">退出登录</button>
+      <button v-if="loggedIn" class="logout" @click="onLogout">退出登录</button>
     </div>
   </div>
 </template>
@@ -364,5 +390,33 @@ onMounted(() => {
   border-radius: 999rem;
   border: 1px solid #ffd9da;
   cursor: pointer;
+}
+
+.login-banner {
+  background: #ffffff;
+  border-radius: 0.24rem;
+  padding: 0.32rem;
+  margin-bottom: 0.24rem;
+  text-align: center;
+  box-shadow: 0 0.08rem 0.24rem rgba(31, 36, 48, 0.05);
+}
+
+.login-btn {
+  width: 100%;
+  height: 0.92rem;
+  background: linear-gradient(135deg, #3b6ef6, #6a8dff);
+  color: #ffffff;
+  font-size: 0.3rem;
+  font-weight: 600;
+  border-radius: 999rem;
+  border: none;
+  box-shadow: 0 0.1rem 0.24rem rgba(59, 110, 246, 0.28);
+  cursor: pointer;
+}
+
+.login-tip {
+  margin-top: 0.16rem;
+  font-size: 0.24rem;
+  color: #9aa3b2;
 }
 </style>
