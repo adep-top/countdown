@@ -28,16 +28,17 @@ apps/countdown/
 
 ## 本地开发
 
-前置：仓库根 `pnpm install` 已装好（apps/countdown 复用仓库根的依赖）。
+前置：Node.js >= 18。依赖全部来自 npm registry（无需 pnpm workspace / adep 平台）。
 
 ```bash
+npm install
+
 # 一条命令起全部：vite(5173) + 进程内 adep dev 模拟运行时(8787)
 # 前端 /api/* 由 vite 代理到模拟运行时，函数改动即热重载
-cd apps/countdown
 npm run dev          # 打开 http://127.0.0.1:5173
 ```
 
-模拟运行时的数据库落在 `apps/countdown/.adep/sim/db.json`（sim 引擎访问自动建表，无需手动建表）。
+模拟运行时的数据库落在 `.adep/sim/db.json`（sim 引擎访问自动建表，无需手动建表）。
 
 ### 常用脚本
 
@@ -75,7 +76,7 @@ docker run -d --name countdown -p 8787:8787 -v countdown-data:/app/.adep countdo
 | `.dockerignore`          | 构建上下文忽略清单（防宿主产物/密钥进镜像） |
 | `.env.example`           | 环境变量示例（复制为 `.env` 按需修改）      |
 
-本地不装 Docker 也能以同样命令试跑（`adep serve` 需要已安装 CLI）：
+本地不装 Docker 也能跑（依赖已由 `npm install` 装好，`adep` 来自 devDependencies）：
 
 ```bash
 npm run start   # = adep serve --host 0.0.0.0 --schema functions/schema.sql --static ./web/dist --spa

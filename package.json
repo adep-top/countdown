@@ -19,13 +19,18 @@
     "frontend:sync": "adep frontend sync",
     "doctor": "adep doctor"
   },
+  "engines": {
+    "node": ">=18"
+  },
   "devDependencies": {
-    "@adep/cli": "workspace:*",
-    "@adep/types": "workspace:*",
+    "@adep/auth-client": "^0.2.2",
+    "@adep/cli": "^0.1.10",
+    "@adep/types": "^0.2.3",
     "@vitejs/plugin-vue": "^6.0.0",
     "typescript": "5.9.3",
     "vite": "^7.0.0",
     "vitest": "^3.2.4",
-    "vue": "^3.5.42"
+    "vue": "^3.5.42",
+    "vue-router": "^5.0.0"
   }
 }
