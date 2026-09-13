@@ -9,10 +9,35 @@ export const BASE_URL = ''
 
 /**
  * 平台 OIDC 授权服务器 issuer（登录即服务）：三方登录走平台 /oauth/* 端点。
- * 本地开发默认本机平台 dev（PORT=3000）；生产部署用 VITE_AUTH_ISSUER 指向平台
- * 部署域名（如 https://auth.adep.example.com/api，README「接入平台登录」）。
+ *
+ * 解析优先级：
+ * 1. 构建期注入 `VITE_AUTH_ISSUER`（生产部署显式指定）；
+ * 2. 浏览器运行时从应用子域推导：应用部署在 `<project>.<platform-domain>`，
+ *    去掉第一级子域即得到平台域名，issuer = `${origin 平台部分}/api`；
+ * 3. 本地开发默认 `http://127.0.0.1:3000/api`（vite dev 5173 端口 + 平台 dev 3000）。
+ *
+ * 平台构建前端时不注入 VITE_AUTH_ISSUER，故运行时推导是平台部署的主路径。
  */
-export const AUTH_ISSUER = (import.meta.env.VITE_AUTH_ISSUER as string | undefined) ?? 'http://127.0.0.1:3000/api'
+function detectAuthIssuer(): string {
+  const envIssuer = import.meta.env.VITE_AUTH_ISSUER as string | undefined
+  if (envIssuer && envIssuer.length > 0) return envIssuer
+
+  if (typeof window !== 'undefined' && window.location) {
+    const hostname = window.location.hostname
+    const parts = hostname.split('.')
+    const isIp = /^\d{1,3}(\.\d{1,3}){3}$/.test(hostname)
+    // 应用子域形态：<project>.<platform-domain>，至少 3 段且不是 IP
+    if (!isIp && parts.length >= 3) {
+      const platformHost = parts.slice(1).join('.')
+      const port = window.location.port ? `:${window.location.port}` : ''
+      return `${window.location.protocol}//${platformHost}${port}/api`
+    }
+  }
+
+  return 'http://127.0.0.1:3000/api'
+}
+
+export const AUTH_ISSUER = detectAuthIssuer()
 
 export const MAX_EVENTS = 200
 
