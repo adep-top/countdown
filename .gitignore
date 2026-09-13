@@ -6,3 +6,5 @@ node_modules/
 
 # 前端构建产物（vite build 生成，独立部署时本地构建）
 web/dist/
+
+.env

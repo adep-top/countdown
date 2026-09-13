@@ -1,0 +1,6 @@
+allowBuilds:
+  esbuild: true
+minimumReleaseAgeExclude:
+  - '@adep/cli@0.1.10'
+  - '@adep/types@0.2.3'
+  - '@adep/vite-plugin@0.1.4'
