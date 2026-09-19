@@ -1,5 +1,5 @@
 -- 倒数日应用数据库 Schema（移植自 cf-backend migrations/0001_initial.sql）。
--- 用法：adep db migrate functions/schema.sql（平台侧建表）；
+-- 用法：adep db migrate database/schema.sql（平台侧建表）；
 -- 本地 dev（adep dev / vite 插件）的 sim 引擎访问时自动建表，无需手动执行。
 -- 每行一条语句，以分号结尾（migrate 按行拆分逐条执行）。
 

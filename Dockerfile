@@ -2,22 +2,23 @@
 #
 # 架构：单容器承载「云函数 + 前端静态站点 + 本地持久化」。
 #   - 函数：@adep/cli 的 `adep serve`（本地模拟运行时，与平台同源执行器）
-#   - 前端：vite build 产物 web/dist 由 serve 静态托管挂到 /
+#   - 前端：vite build 产物 site/ 由 serve 静态托管挂到 /
 #   - 数据：sim 引擎持久化落 .adep/sim/（挂卷，容器重建不丢）
-#   - 建表：`--schema functions/schema.sql` 启动时自动应用（IF NOT EXISTS 幂等）
+#   - 建表：`--schema database/schema.sql` 启动时自动应用（IF NOT EXISTS 幂等）
 #
 # 构建：docker build -t countdown .
 # 运行：docker compose up -d --build（或 docker run -p 8787:8787 -v countdown-data:/app/.adep countdown）
 
-# —— 构建阶段：编译前端 ——
+# —— 构建阶段：编译前端（项目根 vite 工程，产物 site/） ——
 FROM node:20-alpine AS build
 WORKDIR /build
-# 先复制清单再装依赖（利用层缓存）；web/package.json 是自包含的（依赖均为 registry 版本）
-COPY web/package.json web/tsconfig.json web/vite.config.ts web/index.html ./
-COPY web/src ./src
+# 先复制清单与 vite 配置再装依赖（利用层缓存）
+COPY package.json ./
 RUN npm install --no-audit --no-fund
+COPY index.html vite.config.ts ./
+COPY web/src ./web/src
 RUN npm run build
-# 产物：/build/dist
+# 产物：/build/site
 
 # —— 运行阶段：@adep/cli 本地模拟运行时 ——
 FROM node:20-alpine
@@ -31,7 +32,7 @@ RUN printf '%s\n' \
   '  "private": true,' \
   '  "type": "module",' \
   '  "scripts": {' \
-  '    "start": "adep serve --host 0.0.0.0 --schema functions/schema.sql --static ./web/dist --spa"' \
+  '    "start": "adep serve --host 0.0.0.0 --schema database/schema.sql --static ./site --spa"' \
   '  },' \
   '  "dependencies": {' \
   '    "@adep/cli": "^0.1.7"' \
@@ -41,9 +42,10 @@ RUN npm install --omit=dev --no-audit --no-fund
 
 # 应用代码（.dockerignore 已排除 node_modules / .adep / 构建产物等）
 COPY functions ./functions
+COPY database ./database
 COPY adep.config.ts adep.d.ts ./
 # 前端构建产物
-COPY --from=build /build/dist ./web/dist
+COPY --from=build /build/site ./site
 
 EXPOSE 8787
 

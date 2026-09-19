@@ -1,10 +1,16 @@
 # 本地模拟运行时数据（adep dev / vite 插件生成）
 .adep/
 
-# 依赖（根仓库 .gitignore 已全局忽略 node_modules，这里留档说明）
+# 依赖
 node_modules/
 
 # 前端构建产物（vite build 生成，独立部署时本地构建）
-web/dist/
+site/
 
+# 本地数据
+data/
+
+# 环境变量本地覆盖
 .env
+.env.local
+.env.*.local

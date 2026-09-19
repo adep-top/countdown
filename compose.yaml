@@ -24,7 +24,7 @@ services:
       # 监听面固定容器内端口（对外映射走 APP_PORT）；serve：旗标 > 环境变量 > 内置缺省
       - PORT=8787
       - HOST=0.0.0.0
-      - ADEP_SERVE_STATIC_DIR=web/dist
+      - ADEP_SERVE_STATIC_DIR=site
       - SINGLE_INSTANCE=true
     env_file:
       - .env

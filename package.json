@@ -3,34 +3,36 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "倒数日 / 纪念日 —— 微信小程序移植为 adep 应用（functions/ 云函数 + web/ 前端源码）",
+  "description": "倒数日 / 纪念日 —— 微信小程序移植为 adep 应用（functions/ 云函数 + web/src/ 前端源码 + site/ 构建产物）",
   "scripts": {
-    "dev": "vite -c web/vite.config.ts",
-    "dev:api": "adep dev",
-    "build": "vite build -c web/vite.config.ts",
-    "preview": "vite preview -c web/vite.config.ts",
-    "start": "adep serve --host 0.0.0.0 --schema functions/schema.sql --static ./web/dist --spa",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "site:deploy": "adep hosting deploy site --spa",
+    "serve": "adep serve",
+    "start": "adep serve --host 0.0.0.0 --schema database/schema.sql --static ./site --spa",
     "test": "vitest run",
     "test:watch": "vitest",
-    "db:init": "adep db start && adep db migrate functions/schema.sql",
-    "deploy": "adep publish",
-    "deploy:functions": "adep publish --only functions",
-    "deploy:frontend": "adep publish --only frontend",
-    "frontend:sync": "adep frontend sync",
+    "db:init": "adep db start && adep db migrate database/schema.sql",
+    "deploy": "adep publish --only functions",
     "doctor": "adep doctor"
   },
-  "engines": {
-    "node": ">=18"
+  "dependencies": {
+    "vue": "^3.5.42",
+    "vue-router": "^5.0.0",
+    "@adep/auth-client": "^0.2.2"
   },
   "devDependencies": {
-    "@adep/auth-client": "^0.2.2",
     "@adep/cli": "^0.1.10",
     "@adep/types": "^0.2.3",
     "@vitejs/plugin-vue": "^6.0.0",
+    "esbuild-wasm": "^0.25.12",
     "typescript": "5.9.3",
     "vite": "^7.0.0",
-    "vitest": "^3.2.4",
-    "vue": "^3.5.42",
-    "vue-router": "^5.0.0"
+    "vitest": "^3.2.4"
+  },
+  "engines": {
+    "node": ">=18",
+    "bun": ">=1.0"
   }
 }

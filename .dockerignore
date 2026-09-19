@@ -3,8 +3,7 @@
 node_modules/
 .adep/
 site/
-web/dist/
-web/node_modules/
+data/
 
 # 密钥与本地覆盖：只经 compose env_file 在运行期注入，绝不进镜像层
 .env

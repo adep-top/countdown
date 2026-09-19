@@ -44,12 +44,12 @@ npm run dev          # 打开 http://127.0.0.1:5173
 
 | 命令                       | 作用                                                |
 | -------------------------- | --------------------------------------------------- |
-| `npm run dev`              | 本地全栈开发（vite + 模拟运行时，热重载）           |
-| `npm run test`             | 运行函数/工具 vitest 测试                           |
-| `npm run db:init`          | 平台侧启动项目数据库并应用 `functions/schema.sql`   |
-| `npm run deploy`           | 全量发布到平台：函数 + 前端（含自动同步 web/ 源码） |
-| `npm run deploy:functions` | 只发布云函数                                        |
-| `npm run deploy:frontend`  | 只发布前端                                          |
+| `npm run dev`              | 本地全栈开发（根 vite 工程 + 模拟运行时，热重载）  |
+| `npm run build`            | 前端构建到 `site/`（vite build）                   |
+| `npm run test`             | 运行函数/工具 vitest 测试                          |
+| `npm run db:init`          | 平台侧启动项目数据库并应用 `database/schema.sql`   |
+| `npm run deploy`           | 增量发布云函数（`adep publish --only functions`）  |
+| `npm run site:deploy`      | 上传 `site/` 到平台静态托管并开 SPA 回退           |
 | `npm run doctor`           | 环境自检                                            |
 
 ## 独立部署（Docker，不依赖 adep 平台）
@@ -57,8 +57,8 @@ npm run dev          # 打开 http://127.0.0.1:5173
 工程自带 Docker 配置，可在任意装 Docker 的机器上自托管，无需 adep 平台。
 
 **架构**：单容器 = `adep serve`（本地模拟运行时，与平台同源执行器）承载云函数
-（`/api/*`）+ 静态托管前端（`web/dist` 挂到 `/`）+ 本地持久化（`.adep/sim/` 卷）。
-启动时自动应用 `functions/schema.sql` 建表（IF NOT EXISTS 幂等），数据挂卷不丢。
+（`/api/*`）+ 静态托管前端（`site/` 挂到 `/`）+ 本地持久化（`.adep/sim/` 卷）。
+启动时自动应用 `database/schema.sql` 建表（IF NOT EXISTS 幂等），数据挂卷不丢。
 
 ```bash
 # 构建并启动（默认 http://localhost:8787）
@@ -79,10 +79,10 @@ docker run -d --name countdown -p 8787:8787 -v countdown-data:/app/.adep countdo
 本地不装 Docker 也能跑（依赖已由 `npm install` 装好，`adep` 来自 devDependencies）：
 
 ```bash
-npm run start   # = adep serve --host 0.0.0.0 --schema functions/schema.sql --static ./web/dist --spa
+npm run start   # = adep serve --host 0.0.0.0 --schema database/schema.sql --static ./site --spa
 ```
 
-先 `npm run build` 生成 `web/dist` 再 `npm run start`，浏览器访问 `http://127.0.0.1:8787`。
+先 `npm run build` 生成 `site/` 再 `npm run start`，浏览器访问 `http://127.0.0.1:8787`。
 
 ## 部署到本地 adep 平台
 
@@ -98,14 +98,18 @@ npm run start   # = adep serve --host 0.0.0.0 --schema functions/schema.sql --st
    ```bash
    npm run db:init
    ```
-4. 发布（函数 + 前端）：
+4. 发布云函数：
    ```bash
    npm run deploy
    ```
-5. 访问 `http://countdown.adep.localhost:3001` 测试。
+5. 构建并发布前端静态站点：
+   ```bash
+   npm run build && npm run site:deploy
+   ```
+6. 访问 `http://countdown.adep.localhost:3001` 测试。
 
-> 平台改进配套：CLI 新增 `adep frontend sync`（上传本地 `web/` 源码为平台前端草稿）
-> 与 `adep db migrate <file>`（应用 schema.sql），`adep publish` 全量发布会自动执行。
+> 规范形态为「根 vite 工程 + `web/` 只放源码」：云函数走 `adep publish --only functions`，
+> 前端走 `vite build` → `site/` → `adep hosting deploy site --spa`。
 
 ## 接入平台登录（登录即服务）
 
