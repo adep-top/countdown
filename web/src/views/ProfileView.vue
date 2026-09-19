@@ -4,13 +4,13 @@
 // 已登录 → 云端用户信息 + 分类统计 + 退出登录。
 import { computed, onMounted, reactive } from 'vue'
 import { request } from '../lib/request'
-import { ensureLogin, getUser, logout, isLoggedIn } from '../lib/auth'
+import { ensureLogin, getUser, logout, switchUser, isLoggedIn } from '../lib/auth'
 import { startLogin } from '../lib/oidc'
-import { listEvents } from '../lib/events'
+import { listEvents, EVENTS_CACHE_KEY } from '../lib/events'
 import { CATEGORY_LABEL } from '../lib/config'
 import { showModal, showToast } from '../ui/ui'
 
-const CACHE_KEY = 'events_cache'
+const CACHE_KEY = EVENTS_CACHE_KEY
 const VERSION = '1.0.0'
 
 const data = reactive({
@@ -26,6 +26,12 @@ const data = reactive({
 })
 
 const loggedIn = computed(() => isLoggedIn())
+
+/** 头像占位：登录用户用昵称首字，未登录用通用「日」。 */
+const avatarText = computed(() => {
+  const name = data.user?.nickname?.trim()
+  return name ? name.charAt(0) : '日'
+})
 
 const apiHost = computed(() => {
   const url = new URL(window.location.href)
@@ -98,16 +104,30 @@ async function onClearCache(): Promise<void> {
 async function onLogout(): Promise<void> {
   const ok = await showModal({
     title: '退出登录',
-    content: '退出后本机登录状态将被清除；未登录期间数据保存在本机浏览器。',
+    content: '退出后将清除本机登录状态与本地缓存数据；云端数据不受影响。',
     confirmText: '退出',
   })
   if (!ok) return
   logout()
-  localStorage.removeItem(CACHE_KEY)
   showToast({ title: '已退出', icon: 'success' })
   setTimeout(() => {
     window.location.href = '/profile'
   }, 400)
+}
+
+/** 切换账号：退出当前账号并清缓存，随后跳授权页换号登录。 */
+async function onSwitchUser(): Promise<void> {
+  const ok = await showModal({
+    title: '切换账号',
+    content: '将退出当前账号并清空本机缓存数据，随后前往登录页选择其他账号。',
+    confirmText: '切换',
+  })
+  if (!ok) return
+  try {
+    await switchUser()
+  } catch (err) {
+    showToast({ title: err instanceof Error ? err.message : '跳转登录失败', icon: 'none' })
+  }
 }
 
 async function onCopyHost(): Promise<void> {
@@ -133,7 +153,7 @@ onMounted(() => {
 
       <div class="user-card">
         <div class="avatar">
-          <span class="avatar-text">日</span>
+          <span class="avatar-text">{{ avatarText }}</span>
         </div>
         <div class="user-info">
           <div class="user-name">{{ data.user?.nickname || '本地用户' }}</div>
@@ -189,7 +209,10 @@ onMounted(() => {
         </div>
       </div>
 
-      <button v-if="loggedIn" class="logout" @click="onLogout">退出登录</button>
+      <template v-if="loggedIn">
+        <button class="switch-account" @click="onSwitchUser">切换账号</button>
+        <button class="logout" @click="onLogout">退出登录</button>
+      </template>
     </div>
   </div>
 </template>
@@ -376,6 +399,23 @@ onMounted(() => {
   font-size: 0.24rem;
   color: #a0a8b8;
   line-height: 1.7;
+}
+
+.switch-account {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 0.92rem;
+  margin-bottom: 0.24rem;
+  background: linear-gradient(135deg, #3b6ef6, #6a8dff);
+  color: #ffffff;
+  font-size: 0.3rem;
+  font-weight: 600;
+  border-radius: 999rem;
+  border: none;
+  box-shadow: 0 0.1rem 0.24rem rgba(59, 110, 246, 0.28);
+  cursor: pointer;
 }
 
 .logout {

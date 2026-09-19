@@ -128,7 +128,7 @@ npm run start   # = adep serve --host 0.0.0.0 --schema database/schema.sql --sta
 
 ### 本地开发
 
-平台 dev 默认 `http://127.0.0.1:3000/api`（`web/src/lib/config.ts` 的 `AUTH_ISSUER` 缺省值），
+平台 dev 默认 `http://adep.localhost:3001/api`（`web/src/lib/config.ts` 的 `AUTH_ISSUER` 缺省值），
 `npm run dev` 开箱即可点 [登录以同步数据] 走完整授权流程。
 
 ### 生产部署

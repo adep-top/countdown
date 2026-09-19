@@ -5,7 +5,7 @@
   "type": "module",
   "description": "倒数日 / 纪念日 —— 微信小程序移植为 adep 应用（functions/ 云函数 + web/src/ 前端源码 + site/ 构建产物）",
   "scripts": {
-    "dev": "vite",
+    "dev": "ADEP_AUTH_ISSUER=http://adep.localhost:3001/api vite --host 0.0.0.0",
     "build": "vite build",
     "preview": "vite preview",
     "site:deploy": "adep hosting deploy site --spa",

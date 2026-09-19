@@ -3,12 +3,12 @@
 // 渐变头部 + 总数/下一个 + 分类筛选 + 左滑置顶/删除 + 长按菜单 + 下拉刷新 + 本地缓存秒开。
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { listEvents, updateEvent, deleteEvent } from '../lib/events'
+import { listEvents, updateEvent, deleteEvent, EVENTS_CACHE_KEY } from '../lib/events'
 import { decorateEvent, type CountdownEvent, type DecodedEvent } from '../lib/date'
 import { CATEGORIES } from '../lib/config'
 import { showToast, showModal, showActionSheet } from '../ui/ui'
 
-const CACHE_KEY = 'events_cache'
+const CACHE_KEY = EVENTS_CACHE_KEY
 const ACTION_RPX = 160 // 左滑露出的操作区宽度（rpx），运行时换算成 px
 
 const router = useRouter()

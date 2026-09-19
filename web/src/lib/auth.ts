@@ -7,8 +7,9 @@
  * 不再有静默设备登录；token 全权归 OIDC 会话（oidc.ts），request.ts 请求时自取。
  */
 import { request } from './request'
-import { hasSession } from './oidc'
+import { hasSession, startLogin } from './oidc'
 import * as oidc from './oidc'
+import { clearLocalData } from './events'
 
 const USER_KEY = 'countdown_user'
 
@@ -57,8 +58,21 @@ export function clearSession(): void {
   localStorage.removeItem(USER_KEY)
 }
 
-/** 退出登录：清 OIDC 会话 + 本地用户缓存。 */
+/**
+ * 退出登录：清 OIDC 会话 + 本地用户缓存 + 本机缓存数据（本地草稿、列表缓存）。
+ * 保留 OAuth 客户端注册与 discovery 缓存（非用户数据，重新登录可复用）。
+ */
 export function logout(): void {
   clearSession()
+  clearLocalData()
   void oidc.logout()
+}
+
+/**
+ * 切换登录用户：退出当前账号（含清空本机缓存）后直接跳转平台授权页，
+ * 并带 prompt=login 要求授权端重新认证，以便选择其他账号登录。
+ */
+export async function switchUser(): Promise<void> {
+  logout()
+  await startLogin({ prompt: 'login' })
 }

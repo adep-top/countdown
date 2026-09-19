@@ -14,7 +14,7 @@ export const BASE_URL = ''
  * 1. 构建期注入 `VITE_AUTH_ISSUER`（生产部署显式指定）；
  * 2. 浏览器运行时从应用子域推导：应用部署在 `<project>.<platform-domain>`，
  *    去掉第一级子域即得到平台域名，issuer = `${origin 平台部分}/api`；
- * 3. 本地开发默认 `http://127.0.0.1:3000/api`（vite dev 5173 端口 + 平台 dev 3000）。
+ * 3. 本地开发默认 `http://adep.localhost:3001/api`（vite dev 5173 端口 + 平台 dev 3000）。
  *
  * 平台构建前端时不注入 VITE_AUTH_ISSUER，故运行时推导是平台部署的主路径。
  */
@@ -34,7 +34,7 @@ function detectAuthIssuer(): string {
     }
   }
 
-  return 'http://127.0.0.1:3000/api'
+  return 'http://adep.localhost:3001/api'
 }
 
 export const AUTH_ISSUER = detectAuthIssuer()

@@ -33,9 +33,16 @@ export interface OidcDiscoveryCache {
   fetchedAt: number
 }
 
-/** 回调地址：SPA 同源路径（白名单三类回调之一：回环 / 平台应用子域，见 oauth/store.ts）。 */
+/**
+ * 回调地址：SPA 同源路径（白名单三类回调之一：回环 / 平台应用子域，见 oauth/store.ts）。
+ * 本地开发把 host 归一为 127.0.0.1：平台回环白名单只放行字面量 `127.0.0.1`
+ * （拒绝 localhost，见 store.ts 的 LOOPBACK_CALLBACK_RE）；页面仍可经 localhost 打开，
+ * 仅发给 IdP 的 redirect_uri 用归一后的 origin（注册与授权期逐字一致即可）。
+ */
 export function getRedirectUri(): string {
-  return `${window.location.origin}/oauth/callback`
+  const url = new URL(window.location.origin)
+  if (url.hostname === 'localhost') url.hostname = '127.0.0.1'
+  return `${url.origin}/oauth/callback`
 }
 
 function clientName(): string {
@@ -184,10 +191,15 @@ export async function forceRefreshToken(): Promise<string | null> {
 
 // ---------- 登录 / 回调 / 登出 ----------
 
-/** 发起登录：构建授权 URL 并整页跳转平台授权页。 */
-export async function startLogin(): Promise<void> {
+/**
+ * 发起登录：构建授权 URL 并整页跳转平台授权页。
+ * @param options.prompt 传 'login' 强制授权端重新认证（切换账号时用，便于换号登录）；
+ *                       服务端不识别该参数时会忽略，不影响登录。
+ */
+export async function startLogin(options?: { prompt?: string }): Promise<void> {
   const client = await authClient()
-  const result = await client.buildAuthorizeUrl()
+  const extraParams = options?.prompt ? { prompt: options.prompt } : undefined
+  const result = await client.buildAuthorizeUrl(extraParams ? { extraParams } : undefined)
   const pending: OidcPending = { state: result.state, codeVerifier: result.codeVerifier }
   sessionStorage.setItem(PENDING_KEY, JSON.stringify(pending))
   window.location.href = result.url

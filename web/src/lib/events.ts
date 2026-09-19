@@ -176,3 +176,16 @@ export async function syncLocalEvents(): Promise<number> {
 function keyOf(e: { title: string; target_date: string }): string {
   return `${e.title}|${e.target_date}`
 }
+
+/** 事件列表缓存键（首页秒开用；退出登录/切换账号时一并清掉）。 */
+export const EVENTS_CACHE_KEY = 'events_cache'
+
+/**
+ * 清空本机缓存数据：本地未同步草稿 + 列表缓存。
+ * 退出登录 / 切换账号时调用，避免上一个用户的数据残留在本机浏览器。
+ * 不动 OIDC 会话与 OAuth 客户端注册（见 auth.logout）。
+ */
+export function clearLocalData(): void {
+  localStorage.removeItem(LOCAL_KEY)
+  localStorage.removeItem(EVENTS_CACHE_KEY)
+}
